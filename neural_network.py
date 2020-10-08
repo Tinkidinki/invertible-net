@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class neural_network:
     
@@ -22,9 +23,15 @@ class neural_network:
 
     def sigmoid_derivative(self,x):
         return self.sigmoid(x)*(1 - self.sigmoid(x))
+
+    def relu(self, x):
+        return np.maximum(0, x)
+
+    def relu_derivative(self, x):
+        return (0.1 if x<=0 else 1)
     
     def derivative_az(self, layer):
-        return np.diag([self.sigmoid_derivative(self.z[layer][j, 0]) 
+        return np.diag([self.relu_derivative(self.z[layer][j, 0]) 
                         for j in range(self.layers[layer])
                            ])
     
@@ -43,7 +50,7 @@ class neural_network:
     def feedforward(self):
         for layer in range(1, self.num_layers):
             self.z[layer] = self.W[layer-1] @ self.a[layer-1]
-            self.a[layer] = self.sigmoid(self.z[layer])
+            self.a[layer] = self.relu(self.z[layer])
     
     def backprop(self, sample):
         delta = self.negative_error_derivative(sample)
@@ -53,8 +60,7 @@ class neural_network:
         # print(delta)
         # print("a")
         # print(self.a)
-        self.dW[self.n - 1] = self.dW[self.n - 1] + (np.transpose(delta) @
-                                                     np.transpose(self.a[self.n - 1]))
+        self.dW[self.n - 1] = self.dW[self.n - 1] + (np.transpose(delta) @ np.transpose(self.a[self.n - 1]))
         for layer in range(self.n-2, -1, -1):
             # print("layer "+str(layer))
             # print("delta")
@@ -68,10 +74,9 @@ class neural_network:
     def train(self, epochs, learning_rate):
 
         self.learning_rate = learning_rate
-        self.W = [np.random.rand(self.layers[i+1], self.layers[i])
-                        for i in range(self.n)]
+        self.W = [-10 + (20 * np.random.rand(self.layers[i+1], self.layers[i])) for i in range(self.n)]
 
-
+        epoch_error_array = []
         for epoch in range(epochs):
             self.dW = [np.zeros((self.layers[i+1], self.layers[i]))
                         for i in range(self.n)]
@@ -85,6 +90,7 @@ class neural_network:
                 self.backprop(sample)
                    
             print("EPOCH: "+ str(epoch) + "   ERROR: "+str(epoch_error))
+            epoch_error_array.append(epoch_error)
 
             for layer in range(0, self.n):
                 print("dW ")
@@ -92,6 +98,14 @@ class neural_network:
                 print("Weight")
                 print(self.W)
                 self.W[layer] = self.W[layer] + self.dW[layer]
+
+        plt.plot(epoch_error_array)
+        plt.xlabel("Epoch")
+        plt.ylabel("Error")
+        plt.show()
+        plt.close()
+        print(self.W)
+
             
     def test(self, X_test):
         outputs = []
