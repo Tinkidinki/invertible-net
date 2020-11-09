@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 class neural_network:
     
-    def __init__(self, X, y, layers):
+    def __init__(self, X, y, layers, func = "relu"):
         self.X = X
         self.y = y
         self.layers = [len(X[0])] + layers + [len(y[0])]
@@ -16,6 +16,8 @@ class neural_network:
         
         self.dW = [np.zeros((self.layers[i+1], self.layers[i]))
                         for i in range(self.n)]
+
+        self.func = func
     
                            
     def sigmoid(self,x):
@@ -29,9 +31,18 @@ class neural_network:
 
     def relu_derivative(self, x):
         return (0.1 if x<=0 else 1)
+
+    def non_linear(self, x):
+        return {"sigmoid": self.sigmoid(x), 
+                "relu": self.relu(x)}[self.func]
+
+    def non_linear_derivative(self, x):
+        return {"sigmoid": self.sigmoid_derivative(x), 
+                "relu": self.relu_derivative(x)}[self.func]
+
     
     def derivative_az(self, layer):
-        return np.diag([self.relu_derivative(self.z[layer][j, 0]) 
+        return np.diag([self.non_linear_derivative(self.z[layer][j, 0]) 
                         for j in range(self.layers[layer])
                            ])
     
@@ -39,9 +50,6 @@ class neural_network:
         return self.W[layer-1]
 
     def error(self, sample):
-        # print(self.y[sample])
-        # print(self.z[self.n])
-        # print(self.layers[self.n])
         return sum((self.y[sample][j, 0] - self.z[self.n][j,0])**2 for j in range(self.layers[self.n])) 
     
     def negative_error_derivative(self, t):
@@ -50,23 +58,13 @@ class neural_network:
     def feedforward(self):
         for layer in range(1, self.num_layers):
             self.z[layer] = self.W[layer-1] @ self.a[layer-1]
-            self.a[layer] = self.relu(self.z[layer])
+            self.a[layer] = self.non_linear(self.z[layer])
     
     def backprop(self, sample):
         delta = self.negative_error_derivative(sample)
-        # print("Before")
-        # print(self.dW)
-        # print("delta")
-        # print(delta)
-        # print("a")
-        # print(self.a)
         self.dW[self.n - 1] = self.dW[self.n - 1] + (np.transpose(delta) @ np.transpose(self.a[self.n - 1]))
         for layer in range(self.n-2, -1, -1):
-            # print("layer "+str(layer))
-            # print("delta")
-            # print(delta)
             delta = delta @ self.derivative_za(layer+2) @ self.derivative_az(layer+1)
-            # print(delta)
             self.dW[layer] = self.dW[layer] + (np.transpose(delta) 
                                                @ np.transpose(self.a[layer]))
             
@@ -74,7 +72,7 @@ class neural_network:
     def train(self, epochs, learning_rate):
 
         self.learning_rate = learning_rate
-        self.W = [-10 + (20 * np.random.rand(self.layers[i+1], self.layers[i])) for i in range(self.n)]
+        self.W = [0.5 *np.random.rand(self.layers[i+1], self.layers[i]) for i in range(self.n)]
 
         epoch_error_array = []
         for epoch in range(epochs):
@@ -104,6 +102,7 @@ class neural_network:
         plt.ylabel("Error")
         plt.show()
         plt.close()
+        print ("Weight Matrices ")
         print(self.W)
 
             
